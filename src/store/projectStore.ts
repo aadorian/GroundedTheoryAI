@@ -1,43 +1,19 @@
 import JSZip from 'jszip';
-import type {
-  Artifact,
-  Category,
-  ChangeCategory,
-  ChangeRecord,
-  Code,
-  Coding,
-  Memo,
-  ProjectState,
-  ReportSection,
-  ResearchQuestion,
-  Theory,
-  TypeOfStatus,
-  TypeOfVote,
-  Vote,
-  VoteDecision,
-} from '../types/domain';
+import type { Artifact, ProjectState } from '../types/domain';
 import { PHASE_ORDER } from '../types/domain';
 import { SEED_PROJECT } from '../lib/seedData';
+import {
+  applyProjectReducer,
+  type ProjectAction,
+  checkPrivacyForExport,
+  createChangeRecord,
+  createVote,
+  evaluateConsensus,
+  getNextPhase,
+  getPrevPhase,
+} from '../domain';
 
 const STORAGE_KEY = 'mentor-project-state';
-
-type ProjectAction =
-  | { type: 'LOAD'; payload: ProjectState }
-  | { type: 'SET_ACTIVE_RESEARCHER'; researcherId: string }
-  | { type: 'UPDATE_ARTIFACT'; id: string; updates: Partial<Artifact> }
-  | { type: 'ADD_ARTIFACT'; artifact: Artifact }
-  | { type: 'ADD_CHANGE'; record: ChangeRecord }
-  | { type: 'ADD_CODING'; coding: Coding }
-  | { type: 'ADD_CODE'; code: Code }
-  | { type: 'ADD_CATEGORY'; category: Category }
-  | { type: 'UPDATE_THEORY'; theory: Theory }
-  | { type: 'ADD_MEMO'; memo: Memo }
-  | { type: 'ADD_VOTE'; vote: Vote }
-  | { type: 'ADVANCE_PHASE'; artifactId: string; targetPhase: TypeOfStatus }
-  | { type: 'BACKTRACK'; artifactId: string; targetPhase: TypeOfStatus; reason: string }
-  | { type: 'UPDATE_RQ'; rq: ResearchQuestion }
-  | { type: 'UPDATE_REPORT_SECTION'; section: ReportSection }
-  | { type: 'UPDATE_SETTINGS'; updates: Partial<ProjectState['settings']> };
 
 function loadState(): ProjectState {
   try {
@@ -54,187 +30,9 @@ function saveState(state: ProjectState) {
 }
 
 function reducer(state: ProjectState, action: ProjectAction): ProjectState {
-  let next: ProjectState;
-  switch (action.type) {
-    case 'LOAD':
-      next = action.payload;
-      break;
-    case 'SET_ACTIVE_RESEARCHER':
-      next = { ...state, activeResearcherId: action.researcherId };
-      break;
-    case 'UPDATE_ARTIFACT':
-      next = {
-        ...state,
-        settings: { ...state.settings, updatedAt: new Date().toISOString() },
-        artifacts: state.artifacts.map((a) =>
-          a.id === action.id ? { ...a, ...action.updates } : a
-        ),
-      };
-      break;
-    case 'ADD_ARTIFACT':
-      next = {
-        ...state,
-        artifacts: [...state.artifacts, action.artifact],
-        settings: { ...state.settings, updatedAt: new Date().toISOString() },
-      };
-      break;
-    case 'ADD_CHANGE':
-      next = {
-        ...state,
-        changeLog: [action.record, ...state.changeLog],
-        settings: { ...state.settings, updatedAt: new Date().toISOString() },
-      };
-      break;
-    case 'ADD_CODING':
-      next = { ...state, codings: [...state.codings, action.coding] };
-      break;
-    case 'ADD_CODE':
-      next = { ...state, codes: [...state.codes, action.code] };
-      break;
-    case 'ADD_CATEGORY':
-      next = { ...state, categories: [...state.categories, action.category] };
-      break;
-    case 'UPDATE_THEORY':
-      next = { ...state, theory: action.theory };
-      break;
-    case 'ADD_MEMO':
-      next = { ...state, memos: [...state.memos, action.memo] };
-      break;
-    case 'ADD_VOTE':
-      next = { ...state, votes: [...state.votes, action.vote] };
-      break;
-    case 'ADVANCE_PHASE':
-      next = {
-        ...state,
-        artifacts: state.artifacts.map((a) =>
-          a.id === action.artifactId ? { ...a, status: action.targetPhase } : a
-        ),
-        settings: { ...state.settings, updatedAt: new Date().toISOString() },
-      };
-      break;
-    case 'BACKTRACK':
-      next = {
-        ...state,
-        artifacts: state.artifacts.map((a) =>
-          a.id === action.artifactId ? { ...a, status: action.targetPhase } : a
-        ),
-        changeLog: [
-          {
-            id: `ch-${Date.now()}`,
-            timestamp: new Date().toISOString(),
-            authorId: state.activeResearcherId,
-            category: 'artefact',
-            action: `BACKTRACK: ${action.targetPhase}`,
-            rationale: action.reason,
-            status: 'committed',
-          },
-          ...state.changeLog,
-        ],
-        settings: { ...state.settings, updatedAt: new Date().toISOString() },
-      };
-      break;
-    case 'UPDATE_RQ':
-      next = {
-        ...state,
-        settings: {
-          ...state.settings,
-          updatedAt: new Date().toISOString(),
-          theoreticalFramework: {
-            ...state.settings.theoreticalFramework,
-            researchQuestions: state.settings.theoreticalFramework.researchQuestions.map(
-              (rq) => (rq.id === action.rq.id ? action.rq : rq)
-            ),
-          },
-        },
-      };
-      break;
-    case 'UPDATE_REPORT_SECTION':
-      next = {
-        ...state,
-        settings: {
-          ...state.settings,
-          reportSections: state.settings.reportSections.map((s) =>
-            s.id === action.section.id ? action.section : s
-          ),
-        },
-      };
-      break;
-    case 'UPDATE_SETTINGS':
-      next = {
-        ...state,
-        settings: { ...state.settings, ...action.updates, updatedAt: new Date().toISOString() },
-      };
-      break;
-    default:
-      next = state;
-  }
+  const next = applyProjectReducer(state, action);
   saveState(next);
   return next;
-}
-
-export function getNextPhase(current: TypeOfStatus): TypeOfStatus | null {
-  const idx = PHASE_ORDER.indexOf(current);
-  return idx < PHASE_ORDER.length - 1 ? PHASE_ORDER[idx + 1] : null;
-}
-
-export function getPrevPhase(current: TypeOfStatus): TypeOfStatus | null {
-  const idx = PHASE_ORDER.indexOf(current);
-  return idx > 0 ? PHASE_ORDER[idx - 1] : null;
-}
-
-export function evaluateConsensus(
-  votes: Vote[],
-  targetId: string,
-  researchers: { id: string }[],
-  votingType: TypeOfVote
-): { met: boolean; approve: number; reject: number; total: number } {
-  const relevant = votes.filter((v) => v.targetId === targetId);
-  const approve = relevant.filter((v) => v.decision === 'approve').length;
-  const reject = relevant.filter((v) => v.decision === 'reject').length;
-  const total = researchers.length;
-
-  let met = false;
-  if (votingType === 'unanimous') met = approve === total && reject === 0;
-  else if (votingType === 'majority') met = approve > total / 2;
-  else met = approve >= Math.ceil(total * 0.66);
-
-  return { met, approve, reject, total };
-}
-
-export function createChangeRecord(
-  authorId: string,
-  category: ChangeCategory,
-  action: string,
-  rationale: string,
-  status: ChangeRecord['status'] = 'draft',
-  note?: string
-): ChangeRecord {
-  return {
-    id: `ch-${Date.now()}`,
-    timestamp: new Date().toISOString(),
-    authorId,
-    category,
-    action,
-    rationale,
-    status,
-    note,
-  };
-}
-
-export function createVote(
-  targetId: string,
-  targetType: Vote['targetType'],
-  researcherId: string,
-  decision: VoteDecision
-): Vote {
-  return {
-    id: `v-${Date.now()}-${researcherId}`,
-    targetId,
-    targetType,
-    researcherId,
-    decision,
-    timestamp: new Date().toISOString(),
-  };
 }
 
 export async function exportProjectJson(state: ProjectState): Promise<Blob> {
@@ -364,13 +162,16 @@ export function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export function checkPrivacyForExport(artifacts: Artifact[]): {
-  safe: boolean;
-  privateCount: number;
-} {
-  const privateCount = artifacts.filter((a) => a.access === 'private').length;
-  return { safe: privateCount === 0, privateCount };
-}
-
-export { loadState, reducer, STORAGE_KEY };
-export type { ProjectAction, ProjectState };
+export {
+  loadState,
+  reducer,
+  STORAGE_KEY,
+  getNextPhase,
+  getPrevPhase,
+  evaluateConsensus,
+  createChangeRecord,
+  createVote,
+  checkPrivacyForExport,
+  applyProjectReducer,
+};
+export type { ProjectAction, ProjectState, Artifact };

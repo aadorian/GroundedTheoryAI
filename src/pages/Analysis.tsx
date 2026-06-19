@@ -1,67 +1,68 @@
+import { useState } from 'react';
 import { Header } from '../components/layout/Header';
-import { CodingWorkspace } from '../components/analysis/CodingWorkspace';
+import { AnalysisHeader } from '../components/analysis/AnalysisHeader';
+import { GTCodingWorkspace } from '../components/analysis/GTCodingWorkspace';
 import { TheoryGraph } from '../components/analysis/TheoryGraph';
-import { ConsensusPanel, CategoryBuilder, TheoryPanel } from '../components/analysis/ConsensusPanel';
-import { MemoPanel } from '../components/analysis/MemoPanel';
+import { ConstantComparisonPanel } from '../components/analysis/ConstantComparisonPanel';
+import { CodeFrequencyPanel, SaturationPanel } from '../components/analysis/SaturationPanel';
+import { AxialCategoryPanel } from '../components/analysis/AxialCategoryPanel';
+import { MemoWritingPanel } from '../components/analysis/MemoWritingPanel';
+import { TheoreticalIntegrationPanel } from '../components/analysis/TheoreticalIntegrationPanel';
+import { ConsensusPanel } from '../components/analysis/ConsensusPanel';
 import { useProject } from '../context/ProjectContext';
-import { getPrevPhase } from '../context/ProjectContext';
-import { PHASE_LABELS } from '../types/domain';
+import { suggestGTCodingStage, computeSaturationMetrics, type GTCodingStage } from '../domain/gtAnalysis';
 
 export function Analysis() {
-  const { state, backtrackArtifact } = useProject();
-  const analysisArtifacts = state.artifacts.filter((a) => a.status === 'analysis');
-  const prev = getPrevPhase('analysis');
+  const { state } = useProject();
+  const metrics = computeSaturationMetrics(state);
+  const [stage, setStage] = useState<GTCodingStage>(() => suggestGTCodingStage(metrics));
+  const [memoSegment, setMemoSegment] = useState<{
+    text: string;
+    start: number;
+    end: number;
+    artifactId: string;
+  } | null>(null);
+
+  const primaryCode = state.codes.find((c) => c.kind === 'code');
 
   return (
     <>
       <Header title="Analysis" showBack backTo="/scientist/data-management" />
-      <div className="flex-1 overflow-hidden flex flex-col p-4 gap-4">
-        <div className="flex gap-2 shrink-0">
-          {analysisArtifacts.map((a) => (
-            <button
-              key={a.id}
-              onClick={() =>
-                prev &&
-                backtrackArtifact(a.id, prev, 'Revisit coding — ArtEModel-GT more coding loop')
-              }
-              className="text-xs px-3 py-1.5 border border-purple-200 text-purple-700 rounded-lg hover:bg-purple-50"
-            >
-              ↺ More coding: {a.name.slice(0, 20)}…
-            </button>
-          ))}
-          {prev && (
-            <button
-              onClick={() => {
-                const a = analysisArtifacts[0];
-                if (a) backtrackArtifact(a.id, 'acquisition', 'More data collection required');
-              }}
-              className="text-xs px-3 py-1.5 border border-orange-200 text-orange-700 rounded-lg hover:bg-orange-50"
-            >
-              ← More data ({PHASE_LABELS.acquisition})
-            </button>
-          )}
-        </div>
+      <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
+        <AnalysisHeader stage={stage} onStageChange={setStage} />
 
-        <div className="flex-1 min-h-0">
-          <CodingWorkspace />
-        </div>
+        <div className="flex-1 p-4 space-y-4">
+          <GTCodingWorkspace
+            stage={stage}
+            onSelectionForMemo={(payload) => setMemoSegment(payload)}
+          />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 shrink-0 max-h-80 overflow-y-auto">
-          <TheoryGraph />
-          <CategoryBuilder />
-          <MemoPanel />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 shrink-0">
-          <TheoryPanel />
-          {state.codes[0] && (
-            <ConsensusPanel
-              targetId={state.codes[0].id}
-              targetType="code"
-              targetLabel={`Code approval: ${state.codes[0].name}`}
-              votingType="majority"
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <CodeFrequencyPanel />
+            <SaturationPanel />
+            <ConstantComparisonPanel />
+            <MemoWritingPanel
+              pendingSegment={memoSegment}
+              onClearPending={() => setMemoSegment(null)}
             />
-          )}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <AxialCategoryPanel />
+            <TheoreticalIntegrationPanel />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <TheoryGraph />
+            {primaryCode && (
+              <ConsensusPanel
+                targetId={primaryCode.id}
+                targetType="code"
+                targetLabel={`Open code approval (RITL-C): ${primaryCode.name}`}
+                votingType="majority"
+              />
+            )}
+          </div>
         </div>
       </div>
     </>

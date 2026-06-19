@@ -1,6 +1,6 @@
 import { Header } from '../components/layout/Header';
 import { useProject } from '../context/ProjectContext';
-import { Badge } from '../components/shared/Badge';
+import { ParticipantsCrud, ConsensusCriteriaCrud } from '../components/crud/SettingsCrud';
 
 export function Settings() {
   const { state, exportJson, exportRoCrateBundle, resetProject } = useProject();
@@ -15,20 +15,8 @@ export function Settings() {
           <p className="text-xs text-gray-400 mt-1">{state.settings.fieldOfStudy.location}</p>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="font-semibold text-gray-900 mb-3">Consensus Criteria (RITL-C)</h3>
-          <div className="space-y-2">
-            {state.researchTeam.consensusCriteria.map((c) => (
-              <div key={c.id} className="flex items-center justify-between py-2 border-b border-gray-50">
-                <div>
-                  <p className="text-sm font-medium">{c.name}</p>
-                  <p className="text-xs text-gray-400">{c.description}</p>
-                </div>
-                <Badge variant="outline">{c.votingType}</Badge>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ParticipantsCrud />
+        <ConsensusCriteriaCrud />
 
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h3 className="font-semibold text-gray-900 mb-3">Export & Data</h3>

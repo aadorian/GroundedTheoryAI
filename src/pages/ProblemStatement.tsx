@@ -1,6 +1,7 @@
 import { Header } from '../components/layout/Header';
 import { SummaryCards } from '../components/problem-statement/SummaryCards';
-import { RecentChanges } from '../components/problem-statement/RecentChanges';
+import { ResearchQuestionsCrud, MethodsCrud, ToolsCrud } from '../components/crud/ProblemStatementCrud';
+import { ChangeLogCrud } from '../components/crud/WorkflowCrud';
 import { ResearcherAvatar } from '../components/shared/ResearcherAvatar';
 import { useProject } from '../context/ProjectContext';
 
@@ -30,7 +31,12 @@ export function ProblemStatement() {
 
         <div className="p-6 space-y-6">
           <SummaryCards />
-          <RecentChanges />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <ResearchQuestionsCrud />
+            <MethodsCrud />
+          </div>
+          <ToolsCrud />
+          <ChangeLogCrud />
         </div>
       </div>
     </>

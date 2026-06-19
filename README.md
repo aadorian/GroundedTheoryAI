@@ -25,6 +25,14 @@ Open http://localhost:5173
 
 React 19, TypeScript, Vite, Tailwind CSS 4, D3, Lucide React
 
+## Tests
+
+```bash
+npm test
+```
+
+Unit tests cover domain logic: ArtEModel-GT phase lifecycle, RITL-C consensus, changelog records, artefact privacy checks, project reducer, and hashID generation.
+
 ## Seed project
 
 "Curation and Exploration" — sociocultural communication in Montevideo photo murals (constructivist GT), blended with U C1 thesis validation case study data.

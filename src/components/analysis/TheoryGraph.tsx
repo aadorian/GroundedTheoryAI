@@ -96,7 +96,10 @@ export function TheoryGraph() {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4">
-      <h4 className="text-sm font-semibold text-gray-900 mb-3">Theory Network</h4>
+      <h4 className="text-sm font-semibold text-gray-900 mb-1">Category & Code Network</h4>
+      <p className="text-xs text-gray-500 mb-3">
+        Visual map of axial relationships — open codes linked to higher-order categories.
+      </p>
       <svg ref={svgRef} width="100%" height={280} className="bg-gray-50 rounded-lg" />
     </div>
   );

@@ -315,4 +315,5 @@ export function useProject() {
   return ctx;
 }
 
+export { useDomainCrud } from '../hooks/useDomainCrud';
 export { getNextPhase, getPrevPhase };

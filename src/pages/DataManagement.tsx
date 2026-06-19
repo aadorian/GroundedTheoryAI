@@ -1,5 +1,6 @@
 import { Header } from '../components/layout/Header';
 import { ContextPanel } from '../components/management/ContextPanel';
+import { ArtifactsCrud } from '../components/crud/ArtifactsCrud';
 
 export function DataManagement() {
   return (
@@ -10,6 +11,7 @@ export function DataManagement() {
           Evaluate and contextualise artefacts. Define criteria for analysis (GTA-DCM curation metadata).
         </p>
         <ContextPanel />
+        <ArtifactsCrud status="management" title="Management Artefacts" />
       </div>
     </>
   );

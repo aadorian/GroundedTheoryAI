@@ -8,6 +8,8 @@ import {
 } from '../components/acquisition/AcquisitionViews';
 import { useProject } from '../context/ProjectContext';
 import { getNextPhase } from '../context/ProjectContext';
+import { ArtifactsCrud } from '../components/crud/ArtifactsCrud';
+import { ActivitiesCrud } from '../components/crud/WorkflowCrud';
 import { PHASE_LABELS } from '../types/domain';
 
 export function DataAcquisition() {
@@ -59,6 +61,8 @@ export function DataAcquisition() {
         )}
 
         <ActivityTimeline />
+        <ActivitiesCrud />
+        <ArtifactsCrud status="acquisition" title="Acquisition Artefacts" />
       </div>
     </>
   );
